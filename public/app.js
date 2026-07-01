@@ -22,7 +22,7 @@ const CARC_REASON = {
 const CARC_BASE = { 'CO-50': 0.58, 'CO-97': 0.44, 'PR-204': 0.33, 'CO-16': 0.72, 'CO-197': 0.66, 'CO-29': 0.21 };
 const PAYER_DIFFICULTY = { 'Medicare Advantage': 1.08, 'BCBS': 1.02, 'UnitedHealthcare': 0.86, 'Aetna': 0.95, 'Cigna': 0.92, 'Medicaid MCO': 1.00 };
 const ARGUMENTS = { 'Medical Necessity': 'InterQual criteria citation', 'Bundling': 'NCCI edit rebuttal', 'Non-Covered': 'Plan-document benefit citation', 'Missing Info': 'Corrected claim resubmission', 'Prior Auth': 'Retro-authorization request', 'Timely Filing': 'Proof-of-timely-submission' };
-const PALETTE = ['#5b8cff', '#33d6a6', '#f5c451', '#ff5c8a', '#9a7bff', '#4bc0ff'];
+const PALETTE = ['#3a9fd6', '#f0b323', '#2fb8a0', '#e26d8b', '#8fb4e0', '#c9a227'];
 const DEMO_TODAY = new Date(2026, 6, 1);
 const LOCALE = { en: 'en-US', es: 'es-ES', zh: 'zh-CN' };
 const SCHEMA = ['claim_id', 'patient_name', 'mrn', 'drg_code', 'drg_desc', 'service_date', 'billed_amount', 'payer', 'carc', 'denial_reason', 'denial_date', 'appeal_deadline', 'status'];
@@ -211,11 +211,11 @@ function renderCharts() {
   const payer = s.by_payer;
   CHARTS.payer = new Chart($('#c-payer'), { type: 'bar', data: { labels: payer.map(p => shortPayer(p.key)), datasets: [{ data: payer.map(p => p.amount), backgroundColor: payer.map((_, i) => PALETTE[i % PALETTE.length]), borderRadius: 7, maxBarThickness: 46 }] }, options: barOpts(gridC, v => fmtUSDshort(v), false) });
   const carc = s.by_carc;
-  CHARTS.carc = new Chart($('#c-carc'), { type: 'doughnut', data: { labels: carc.map(c => c.key), datasets: [{ data: carc.map(c => c.count), backgroundColor: carc.map((_, i) => PALETTE[i % PALETTE.length]), borderColor: '#0b1020', borderWidth: 2 }] }, options: { cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } } }, maintainAspectRatio: false } });
+  CHARTS.carc = new Chart($('#c-carc'), { type: 'doughnut', data: { labels: carc.map(c => c.key), datasets: [{ data: carc.map(c => c.count), backgroundColor: carc.map((_, i) => PALETTE[i % PALETTE.length]), borderColor: '#0a1c33', borderWidth: 2 }] }, options: { cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } } }, maintainAspectRatio: false } });
   const f = s.funnel;
-  CHARTS.funnel = new Chart($('#c-funnel'), { type: 'bar', data: { labels: f.map(x => x.stage), datasets: [{ data: f.map(x => x.value), backgroundColor: ['#5b8cff', '#9a7bff', '#33d6a6'], borderRadius: 7, maxBarThickness: 64 }] }, options: { indexAxis: 'y', ...barOpts(gridC, v => fmtUSDshort(v), true) } });
+  CHARTS.funnel = new Chart($('#c-funnel'), { type: 'bar', data: { labels: f.map(x => x.stage), datasets: [{ data: f.map(x => x.value), backgroundColor: ['#3a9fd6', '#6f8fc7', '#f0b323'], borderRadius: 7, maxBarThickness: 64 }] }, options: { indexAxis: 'y', ...barOpts(gridC, v => fmtUSDshort(v), true) } });
   CHARTS.evo = new Chart($('#c-evolution'), {
-    type: 'line', data: { labels: s.win_rate_labels, datasets: [{ data: s.win_rate_trend.map(v => Math.round(v * 100)), borderColor: '#33d6a6', borderWidth: 3, tension: .4, fill: true, pointRadius: 3, pointBackgroundColor: '#33d6a6', backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 230); g.addColorStop(0, 'rgba(51,214,166,.35)'); g.addColorStop(1, 'rgba(51,214,166,0)'); return g; } }] },
+    type: 'line', data: { labels: s.win_rate_labels, datasets: [{ data: s.win_rate_trend.map(v => Math.round(v * 100)), borderColor: '#f0b323', borderWidth: 3, tension: .4, fill: true, pointRadius: 3, pointBackgroundColor: '#f0b323', backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 230); g.addColorStop(0, 'rgba(240,179,35,.35)'); g.addColorStop(1, 'rgba(240,179,35,0)'); return g; } }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + '% win rate' } } }, scales: { x: { grid: { color: gridC } }, y: { grid: { color: gridC }, ticks: { callback: v => v + '%' }, suggestedMin: 30, suggestedMax: 80 } } },
   });
 }

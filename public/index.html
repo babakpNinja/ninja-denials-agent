@@ -21,14 +21,32 @@
       <div class="brand-sub">Autonomous Denials Management &amp; Appeals Agent</div>
     </div>
   </div>
-  <div class="status-pill"><span class="dot"></span> Agent online · 24/7 autonomous triage</div>
+  <div class="top-actions">
+    <button class="btn ghost" id="btn-tour">◎ Take the tour</button>
+    <button class="btn ghost" id="btn-how">ⓘ How it works</button>
+    <div class="status-pill"><span class="dot"></span> Agent online</div>
+  </div>
 </header>
 
 <main>
+  <!-- KPI HEADER -->
   <section class="kpis" id="kpis"></section>
 
+  <!-- DATA SOURCE / UPLOAD BAR -->
+  <section class="databar" id="databar">
+    <div class="db-left">
+      <span class="db-mode" id="db-mode">● Sample data</span>
+      <span class="muted" id="db-detail">5,000 synthetic claims — no real PHI</span>
+    </div>
+    <div class="db-actions">
+      <button class="btn" id="btn-sample">▤ Sample data &amp; upload</button>
+      <button class="btn ghost" id="btn-reset" hidden>↺ Reset to sample</button>
+    </div>
+  </section>
+
   <div class="grid">
-    <section class="card queue-card">
+    <!-- WORK QUEUE -->
+    <section class="card queue-card" id="queue-card">
       <div class="card-head">
         <h2>Live Appeal Work Queue</h2>
         <div class="muted" id="queue-meta">—</div>
@@ -57,7 +75,8 @@
       <div class="table-foot muted" id="queue-foot"></div>
     </section>
 
-    <section class="card feed-card">
+    <!-- ACTIVITY FEED -->
+    <section class="card feed-card" id="feed-card">
       <div class="card-head">
         <h2>Agent Activity Feed</h2>
         <div class="muted live"><span class="dot"></span>live</div>
@@ -66,7 +85,8 @@
     </section>
   </div>
 
-  <div class="grid charts">
+  <!-- CHARTS -->
+  <div class="grid charts" id="charts">
     <section class="card"><div class="card-head"><h2>Denials by Payer</h2><span class="muted">billed $</span></div><div class="chart-box"><canvas id="c-payer"></canvas></div></section>
     <section class="card"><div class="card-head"><h2>Denials by CARC Category</h2><span class="muted">claim count</span></div><div class="chart-box"><canvas id="c-carc"></canvas></div></section>
     <section class="card"><div class="card-head"><h2>Recovery Funnel</h2><span class="muted">denied → appealed → overturned</span></div><div class="chart-box"><canvas id="c-funnel"></canvas></div></section>
@@ -78,6 +98,7 @@
   </footer>
 </main>
 
+<!-- CLAIM MODAL -->
 <div class="modal-backdrop" id="modal" hidden>
   <div class="modal">
     <button class="modal-close" id="modal-close">✕</button>
@@ -85,7 +106,41 @@
   </div>
 </div>
 
+<!-- INFO / PROVENANCE MODAL -->
+<div class="modal-backdrop" id="info" hidden>
+  <div class="modal">
+    <button class="modal-close" id="info-close">✕</button>
+    <div id="info-content"></div>
+  </div>
+</div>
+
+<!-- SAMPLE DATA / UPLOAD MODAL -->
+<div class="modal-backdrop" id="data" hidden>
+  <div class="modal">
+    <button class="modal-close" id="data-close">✕</button>
+    <div id="data-content"></div>
+  </div>
+</div>
+
+<!-- GUIDED TOUR -->
+<div class="tour" id="tour" hidden>
+  <div class="tour-spot" id="tour-spot"></div>
+  <div class="tour-card" id="tour-card">
+    <div class="tour-step" id="tour-step"></div>
+    <h3 id="tour-title"></h3>
+    <p id="tour-body"></p>
+    <div class="tour-nav">
+      <button class="btn ghost" id="tour-skip">Skip</button>
+      <div class="tour-right">
+        <button class="btn ghost" id="tour-prev">Back</button>
+        <button class="btn" id="tour-next">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

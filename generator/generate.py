@@ -51,6 +51,11 @@ CARC_WEIGHTS = {
     "CO-50": 0.24, "CO-97": 0.18, "PR-204": 0.14,
     "CO-16": 0.20, "CO-197": 0.16, "CO-29": 0.08,
 }
+# Prior mean win-rate per denial group = the CARC base overturn rate. Used to
+# Bayesian-shrink small-sample win rates so none read an artificial 100% / 0%.
+GROUP_BASE = {grp: base for (grp, _reason, base) in CARC.values()}
+WINRATE_PRIOR_K = 6   # pseudo-observations of prior strength
+WINRATE_CAP = (0.06, 0.94)
 
 # payer-specific difficulty multiplier on overturn probability
 PAYER_DIFFICULTY = {
@@ -141,9 +146,14 @@ def build_ledger():
         m = matrix.setdefault(r["payer"], {}).setdefault(r["argument"], {"n": 0, "wins": 0, "carc_group": r["carc_group"]})
         m["n"] += 1
         m["wins"] += 1 if r["won"] else 0
+    # Bayesian-shrink each win rate toward its group's base rate: a small sample
+    # (e.g. 4/4) is pulled toward the prior instead of reading a fake 100%.
     for payer, args in matrix.items():
         for arg, m in args.items():
-            m["win_rate"] = round(m["wins"] / m["n"], 3) if m["n"] else 0.0
+            base = GROUP_BASE.get(m["carc_group"], 0.5)
+            smoothed = (m["wins"] + base * WINRATE_PRIOR_K) / (m["n"] + WINRATE_PRIOR_K)
+            m["raw_win_rate"] = round(m["wins"] / m["n"], 3) if m["n"] else 0.0
+            m["win_rate"] = round(min(WINRATE_CAP[1], max(WINRATE_CAP[0], smoothed)), 3)
 
     # best argument per (payer, carc_group)
     best = {}

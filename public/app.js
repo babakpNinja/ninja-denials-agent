@@ -264,8 +264,8 @@ function genReasoning(c) {
 }
 
 /* ---------------------------------------------------------------- claim modal */
-const TEMPLATES = { standard: 'Meridian Regional System', musc: 'MUSC-branded', concise: 'Concise (single page)' };
-const TEMPLATE_ORG = { standard: 'Meridian Regional Health System', musc: 'Medical University of South Carolina', concise: 'Meridian Regional Health System' };
+const TEMPLATES = { standard: 'Meridian Regional System', musc: 'MUSC-branded', ninjatech: 'NinjaTech.ai-branded', concise: 'Concise (single page)' };
+const TEMPLATE_ORG = { standard: 'Meridian Regional Health System', musc: 'Medical University of South Carolina', ninjatech: 'NinjaTech AI', concise: 'Meridian Regional Health System' };
 
 function openClaim(id) {
   const c = STATE.claims.find(x => String(x.claim_id) === String(id)); if (!c) return;
@@ -312,8 +312,11 @@ function openClaim(id) {
 }
 
 /* ---------------------------------------------------------------- PDF export (hospital-grade) */
-let MUSC_LOGO = null;
-function preloadLogo() { MUSC_LOGO = new Image(); MUSC_LOGO.src = 'assets/musc-logo.png'; }
+let MUSC_LOGO = null, NJ_LOGO = null;
+function preloadLogo() {
+  MUSC_LOGO = new Image(); MUSC_LOGO.src = 'assets/musc-logo.png';
+  NJ_LOGO = new Image(); NJ_LOGO.src = 'assets/ninjatech-logo.png';
+}
 
 function exportPDF(c, template, lang) {
   template = template || 'standard'; lang = lang || 'en';
@@ -333,8 +336,12 @@ function exportPDF(c, template, lang) {
   let y = 0;
 
   // ---- accent color per template
-  const accent = template === 'musc' ? [11, 36, 65] : [40, 60, 130]; // MUSC navy #0B2441
-  const headColor = template === 'musc' ? [11, 36, 65] : [60, 90, 200];
+  const accent = template === 'musc' ? [11, 36, 65]        // MUSC navy #0B2441
+    : template === 'ninjatech' ? [0, 92, 255]              // NinjaTech blue #005CFF
+      : [40, 60, 130];
+  const headColor = template === 'musc' ? [11, 36, 65]
+    : template === 'ninjatech' ? [0, 92, 255]
+      : [60, 90, 200];
 
   const heading = (txt) => {
     if (y > 700) { doc.addPage(); y = 60; }
@@ -370,6 +377,20 @@ function exportPDF(c, template, lang) {
     // demo note on a full-width strip below the band — never collides with left text
     doc.setFontSize(8); doc.setTextColor(150, 130, 60); doc.text(t.demoNote, W / 2, 112, { align: 'center' });
     y = 128;
+  } else if (template === 'ninjatech') {
+    // light letterhead (distinct from MUSC's dark navy) — NinjaTech black logo + blue rule
+    doc.setFillColor(245, 246, 250); doc.rect(0, 0, W, 92, 'F');
+    doc.setFillColor(0, 92, 255); doc.rect(0, 92, W, 3, 'F'); // NinjaTech blue rule
+    if (NJ_LOGO && NJ_LOGO.complete && NJ_LOGO.naturalWidth) {
+      try { doc.addImage(NJ_LOGO, 'PNG', M, 28, 190, 36); } catch (e) {}
+    } else { doc.setTextColor(0, 92, 255); setF(true); doc.setFontSize(20); doc.text('NinjaTech AI', M, 52); }
+    setF(false); doc.setFontSize(9.5); doc.setTextColor(90, 100, 120);
+    doc.text(t.unit, M, 80, { maxWidth: W - 2 * M - 120 });
+    doc.setFontSize(8.5); doc.setTextColor(120, 130, 150);
+    doc.text(dateStr, W - M, 40, { align: 'right' });
+    doc.text(t.pkg, W - M, 56, { align: 'right' });
+    doc.setFontSize(8); doc.setTextColor(90, 100, 120); doc.text(t.demoNote, W / 2, 110, { align: 'center' });
+    y = 126;
   } else { // standard
     doc.setFillColor(11, 16, 32); doc.rect(0, 0, W, 92, 'F');
     doc.setFillColor(91, 140, 255); doc.rect(0, 92, W, 3, 'F');

@@ -24,6 +24,7 @@ const PAYER_DIFFICULTY = { 'Medicare Advantage': 1.08, 'BCBS': 1.02, 'UnitedHeal
 const ARGUMENTS = { 'Medical Necessity': 'InterQual criteria citation', 'Bundling': 'NCCI edit rebuttal', 'Non-Covered': 'Plan-document benefit citation', 'Missing Info': 'Corrected claim resubmission', 'Prior Auth': 'Retro-authorization request', 'Timely Filing': 'Proof-of-timely-submission' };
 const PALETTE = ['#5b8cff', '#33d6a6', '#f5c451', '#ff5c8a', '#9a7bff', '#4bc0ff'];
 const DEMO_TODAY = new Date(2026, 6, 1);
+const LOCALE = { en: 'en-US', es: 'es-ES', zh: 'zh-CN' };
 const SCHEMA = ['claim_id', 'patient_name', 'mrn', 'drg_code', 'drg_desc', 'service_date', 'billed_amount', 'payer', 'carc', 'denial_reason', 'denial_date', 'appeal_deadline', 'status'];
 
 let BEST = {}, NOTES = {}, EVOLUTION = [];
@@ -233,7 +234,7 @@ function buildLetter(c, lang, org) {
   const t = window.I18N[lang] || window.I18N.en;
   const group = c.carc_group, { argument, win } = bestFor(c.payer, group, c.overturn_prob), note = NOTES[c.claim_id];
   const amt = fmtUSD(c.billed_amount) + '.00';
-  const dateStr = DEMO_TODAY.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = DEMO_TODAY.toLocaleDateString(LOCALE[lang] || 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const groupName = t.groups[group] || group.toLowerCase();
   const winPct = Math.round(win * 100);
   const reason = T(t.reasons[group] || t.reasons['Missing Info'], { carc: c.carc });
@@ -290,7 +291,7 @@ function openClaim(id) {
           <select id="pdf-template">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
         </label>
         <label>Language
-          <select id="pdf-lang"><option value="en">English</option><option value="zh">中文</option></select>
+          <select id="pdf-lang"><option value="en">English</option><option value="es">Español</option><option value="zh">中文</option></select>
         </label>
         <button class="btn sm" id="pdf-btn">⬇ Export appeal PDF</button>
         <button class="btn ghost sm" id="copy">Copy letter</button>
@@ -346,7 +347,7 @@ function exportPDF(c, template, lang) {
   const para = (txt, lh = 14) => { setF(false); doc.setFontSize(10.5); const lines = doc.splitTextToSize(txt, W - 2 * M); lines.forEach(ln => { if (y > 730) { doc.addPage(); y = 60; } doc.text(ln, M, y); y += lh; }); };
 
   // ---- header band per template
-  const dateStr = DEMO_TODAY.toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = DEMO_TODAY.toLocaleDateString(LOCALE[lang] || 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   if (template === 'concise') {
     setF(true); doc.setTextColor(...accent); doc.setFontSize(15);
     doc.text(org, M, 46);
@@ -361,24 +362,25 @@ function exportPDF(c, template, lang) {
       try { doc.addImage(MUSC_LOGO, 'PNG', M, 24, 73, 48); } catch (e) {}
     } else { doc.setTextColor(255); setF(true); doc.setFontSize(22); doc.text('MUSC', M, 52); }
     doc.setTextColor(255); setF(false); doc.setFontSize(10.5);
-    doc.text('Revenue Integrity · Denials & Appeals Unit', M + 92, 44);
+    doc.text(t.unit, M + 92, 44, { maxWidth: W - (M + 92) - 130 });
     doc.setTextColor(200, 214, 240); doc.setFontSize(9);
-    doc.text('Autonomous Appeals Agent — Appeal Package', M + 92, 60);
+    doc.text(t.pkg, M + 92, 62, { maxWidth: W - (M + 92) - 130 });
     doc.setFontSize(8.5); doc.setTextColor(190, 205, 235);
-    doc.text(dateStr, W - M, 40, { align: 'right' });
-    doc.text(t.demoNote, W - M, 74, { align: 'right' });
-    y = 122;
+    doc.text(dateStr, W - M, 40, { align: 'right' });   // date only on the right (always short)
+    // demo note on a full-width strip below the band — never collides with left text
+    doc.setFontSize(8); doc.setTextColor(150, 130, 60); doc.text(t.demoNote, W / 2, 112, { align: 'center' });
+    y = 128;
   } else { // standard
     doc.setFillColor(11, 16, 32); doc.rect(0, 0, W, 92, 'F');
     doc.setFillColor(91, 140, 255); doc.rect(0, 92, W, 3, 'F');
     doc.setTextColor(255); setF(true); doc.setFontSize(20); doc.text(org, M, 42);
     setF(false); doc.setFontSize(10.5); doc.setTextColor(180, 195, 235);
-    doc.text('Revenue Integrity · Denials & Appeals Unit', M, 60);
-    doc.text('Autonomous Appeals Agent — Appeal Package', M, 75);
+    doc.text(t.unit, M, 60, { maxWidth: W - 2 * M });
+    doc.text(t.pkg, M, 75);
     doc.setFontSize(9); doc.setTextColor(150, 165, 205);
-    doc.text(dateStr, W - M, 42, { align: 'right' });
-    doc.text(zh ? '机密 — 仅供付款方申诉使用' : 'CONFIDENTIAL — for payer appeal use', W - M, 60, { align: 'right' });
-    y = 122;
+    doc.text(dateStr, W - M, 42, { align: 'right' });   // date only on the right
+    doc.setFontSize(8); doc.setTextColor(120, 130, 160); doc.text(t.confidential, W / 2, 110, { align: 'center' });
+    y = 126;
   }
 
   if (template === 'concise') {
@@ -405,7 +407,7 @@ function exportPDF(c, template, lang) {
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i); setF(false); doc.setFontSize(8); doc.setTextColor(150);
-    const foot = `${zh ? 'Aegis 申诉材料' : 'Aegis Appeal Package'} · ${t.labels.claim} ${c.claim_id} · ${i}/${pages}${template === 'musc' ? ' · ' + t.demoNote : ''}`;
+    const foot = `${t.footer} · ${t.labels.claim} ${c.claim_id} · ${i}/${pages}${template === 'musc' ? ' · ' + t.demoNote : ''}`;
     doc.text(foot, W / 2, 770, { align: 'center' });
   }
   doc.save(`appeal_${c.claim_id}_${template}_${lang}.pdf`);

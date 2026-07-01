@@ -1,11 +1,15 @@
 'use strict';
-// Bilingual content for the appeal letter + PDF. Dynamic proper nouns (payer,
-// argument name, DRG, patient, amounts, dates, CARC) stay in English inside the
-// Chinese letter — realistic for bilingual payer appeals; the embedded CJK font
-// still covers Latin + digits so everything renders.
+// Bilingual+ content for the appeal letter + PDF. Dynamic proper nouns (payer,
+// argument name, DRG, patient, amounts, dates, CARC) stay in English inside a
+// translated letter — realistic for multilingual payer appeals; the embedded
+// CJK font covers Latin + digits, and Spanish is Latin-1 (jsPDF handles it).
 window.I18N = {
   en: {
     langName: 'English',
+    unit: 'Revenue Integrity · Denials & Appeals Unit',
+    pkg: 'Autonomous Appeals Agent — Appeal Package',
+    confidential: 'CONFIDENTIAL — for payer appeal use',
+    footer: 'Aegis Appeal Package',
     labels: { patient: 'Patient', mrn: 'Medical Record No.', claim: 'Claim ID', dos: 'Date of Service', drg: 'DRG', billed: 'Billed Amount', denial: 'Denial Code', deadline: 'Appeal Deadline', payer: 'Payer' },
     sections: { summary: 'Claim & Denial Summary', rationale: 'Denial Rationale (as stated by payer)', assessment: 'Agent Assessment', letter: 'Formal Appeal Letter', explanation: 'Plain-Language Explanation' },
     groups: { 'Medical Necessity': 'medical necessity', 'Bundling': 'bundling', 'Non-Covered': 'non-covered', 'Missing Info': 'missing information', 'Prior Auth': 'prior authorization', 'Timely Filing': 'timely filing' },
@@ -29,8 +33,41 @@ window.I18N = {
     explanation: 'This package was assembled by an autonomous appeals agent: it (1) classified the denial by its CARC code, (2) reviewed how similar appeals to this payer have historically resolved, (3) selected the argument with the highest historical overturn rate, (4) cited available clinical evidence, and (5) drafted the payer-addressed letter above. A human reviewer should verify the clinical facts before submission. All figures in this demonstration are based on synthetic data.',
     demoNote: 'Illustrative demo — synthetic data. Not an official document.',
   },
+  es: {
+    langName: 'Español',
+    unit: 'Integridad de Ingresos · Unidad de Denegaciones y Apelaciones',
+    pkg: 'Agente Autónomo de Apelaciones — Paquete de Apelación',
+    confidential: 'CONFIDENCIAL — para uso en apelación ante el pagador',
+    footer: 'Paquete de Apelación Aegis',
+    labels: { patient: 'Paciente', mrn: 'N.º de Historia Clínica', claim: 'N.º de Reclamación', dos: 'Fecha de Servicio', drg: 'GRD', billed: 'Importe Facturado', denial: 'Código de Denegación', deadline: 'Fecha Límite de Apelación', payer: 'Pagador' },
+    sections: { summary: 'Resumen de Reclamación y Denegación', rationale: 'Motivo de la Denegación (según el pagador)', assessment: 'Evaluación del Agente', letter: 'Carta Formal de Apelación', explanation: 'Explicación en Lenguaje Sencillo' },
+    groups: { 'Medical Necessity': 'necesidad médica', 'Bundling': 'agrupación de servicios', 'Non-Covered': 'servicio no cubierto', 'Missing Info': 'información faltante', 'Prior Auth': 'autorización previa', 'Timely Filing': 'presentación oportuna' },
+    dept: 'Departamento de Apelaciones', re: 'Asunto: Apelación Formal de Denegación de Reclamación',
+    greeting: 'Estimado Comité de Revisión de Apelaciones:',
+    open: 'Apelamos formalmente la denegación arriba referenciada y solicitamos su revocación total y el pago correspondiente.',
+    reasons: {
+      'Medical Necessity': 'La denegación cita el CARC {carc} (necesidad médica). El expediente clínico respalda de forma inequívoca la necesidad médica del ingreso y de los servicios prestados.',
+      'Bundling': 'La denegación cita el CARC {carc} (agrupación). Los servicios fueron distintos, identificables por separado y documentados de forma independiente.',
+      'Non-Covered': 'La denegación cita el CARC {carc} (no cubierto). El servicio es una prestación cubierta según el documento del plan del afiliado para el diagnóstico presentado.',
+      'Missing Info': 'La denegación cita el CARC {carc} (información faltante). La documentación completa se adjunta al presente, subsanando la deficiencia señalada.',
+      'Prior Auth': 'La denegación cita el CARC {carc} (sin autorización previa). Los servicios cumplieron los criterios de urgencia y necesidad médica que justifican una autorización retroactiva.',
+      'Timely Filing': 'La denegación cita el CARC {carc} (presentación oportuna). La documentación demuestra que la reclamación se presentó dentro del plazo contractual.',
+    },
+    argument: 'Nuestra apelación se basa en el fundamento probatorio más sólido para esta determinación: {arg}. Según nuestro historial, este argumento ha prevalecido frente a {payer} en denegaciones por {group} en el {win}% de los casos comparables, y la presente reclamación es sustancialmente más sólida que el caso revocado promedio.',
+    clinicalHdr: 'RESUMEN CLÍNICO DEL EXPEDIENTE',
+    clinical: 'Motivo de consulta: {cc}. Los hallazgos objetivos en la presentación incluyeron {findings}. El paciente requirió {treatments} durante una estancia de {los} días. Estos hallazgos cumplen los umbrales reconocidos de gravedad de la enfermedad e intensidad del servicio.',
+    close: 'En consecuencia, la denegación no se sustenta en los hechos clínicos ni en los términos del plan y de la política médica aplicables. Solicitamos que {payer} revoque la denegación {carc} y abone el pago de {amt} dentro del plazo exigido por la normativa aplicable y el acuerdo con el proveedor. Se adjunta la documentación de respaldo.',
+    signoff: 'Atentamente,\n\nUnidad de Apelaciones de Integridad de Ingresos\n{org}\nAgente Autónomo de Apelaciones — revisado y en cola para firma electrónica',
+    assessment: 'Probabilidad de revocación prevista: {p}%. Valor de recuperación esperado (facturado × probabilidad de revocación × urgencia del plazo): {er}. Argumento recomendado: {arg} — históricamente exitoso frente a {payer} en denegaciones por {group} en el {win}% de los casos comparables.',
+    explanation: 'Este paquete fue elaborado por un agente autónomo de apelaciones: (1) clasificó la denegación según su código CARC, (2) revisó cómo se han resuelto históricamente apelaciones similares ante este pagador, (3) seleccionó el argumento con la mayor tasa histórica de revocación, (4) citó la evidencia clínica disponible y (5) redactó la carta dirigida al pagador anterior. Un revisor humano debe verificar los hechos clínicos antes de la presentación. Todas las cifras de esta demostración se basan en datos sintéticos.',
+    demoNote: 'Demostración ilustrativa — datos sintéticos. No es un documento oficial.',
+  },
   zh: {
     langName: '中文',
+    unit: '收入完整性 · 拒付与申诉部门',
+    pkg: '自主申诉智能体 — 申诉材料包',
+    confidential: '机密 — 仅供付款方申诉使用',
+    footer: 'Aegis 申诉材料',
     labels: { patient: '患者', mrn: '病案号', claim: '理赔编号', dos: '服务日期', drg: 'DRG 分组', billed: '账单金额', denial: '拒付代码', deadline: '申诉截止日期', payer: '付款方' },
     sections: { summary: '理赔与拒付摘要', rationale: '拒付理由（付款方陈述）', assessment: '智能体评估', letter: '正式申诉函', explanation: '通俗说明' },
     groups: { 'Medical Necessity': '医疗必要性', 'Bundling': '打包支付', 'Non-Covered': '不予承保', 'Missing Info': '资料缺失', 'Prior Auth': '事先授权', 'Timely Filing': '及时申报' },

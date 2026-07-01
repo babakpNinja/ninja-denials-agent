@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aegis · Autonomous Denials & Appeals Agent</title>
+<meta name="description" content="Autonomous Denials Management & Appeals Agent — 24/7 AI triage and appeal drafting for hospital revenue integrity." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="bg-orbs"><span></span><span></span><span></span></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">◈</div>
+    <div>
+      <div class="brand-name">AEGIS <span>Revenue Integrity</span></div>
+      <div class="brand-sub">Autonomous Denials Management &amp; Appeals Agent</div>
+    </div>
+  </div>
+  <div class="status-pill"><span class="dot"></span> Agent online · 24/7 autonomous triage</div>
+</header>
+
+<main>
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid">
+    <section class="card queue-card">
+      <div class="card-head">
+        <h2>Live Appeal Work Queue</h2>
+        <div class="muted" id="queue-meta">—</div>
+      </div>
+      <div class="filters">
+        <input type="search" id="f-search" placeholder="Search claim, patient, DRG…" />
+        <select id="f-payer"><option value="">All payers</option></select>
+        <select id="f-carc"><option value="">All CARC codes</option></select>
+        <select id="f-status"><option value="">All statuses</option></select>
+        <select id="f-sort">
+          <option value="priority_score">Sort: Priority (recovery $)</option>
+          <option value="billed_amount">Sort: Billed amount</option>
+          <option value="days_to_deadline">Sort: Deadline urgency</option>
+          <option value="overturn_prob">Sort: Win probability</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table id="queue">
+          <thead><tr>
+            <th>Priority</th><th>Claim</th><th>Patient</th><th>Payer</th>
+            <th>CARC</th><th>Billed</th><th>Win&nbsp;%</th><th>Deadline</th><th>Status</th>
+          </tr></thead>
+          <tbody id="queue-body"></tbody>
+        </table>
+      </div>
+      <div class="table-foot muted" id="queue-foot"></div>
+    </section>
+
+    <section class="card feed-card">
+      <div class="card-head">
+        <h2>Agent Activity Feed</h2>
+        <div class="muted live"><span class="dot"></span>live</div>
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
+  </div>
+
+  <div class="grid charts">
+    <section class="card"><div class="card-head"><h2>Denials by Payer</h2><span class="muted">billed $</span></div><div class="chart-box"><canvas id="c-payer"></canvas></div></section>
+    <section class="card"><div class="card-head"><h2>Denials by CARC Category</h2><span class="muted">claim count</span></div><div class="chart-box"><canvas id="c-carc"></canvas></div></section>
+    <section class="card"><div class="card-head"><h2>Recovery Funnel</h2><span class="muted">denied → appealed → overturned</span></div><div class="chart-box"><canvas id="c-funnel"></canvas></div></section>
+    <section class="card"><div class="card-head"><h2>Self-Learning Win Rate</h2><span class="muted">12-week evolution</span></div><div class="chart-box"><canvas id="c-evolution"></canvas></div></section>
+  </div>
+
+  <footer class="foot muted">
+    Synthetic demonstration data — no real patient information. Aegis Autonomous Appeals Agent · POC build.
+  </footer>
+</main>
+
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

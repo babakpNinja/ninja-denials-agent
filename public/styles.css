@@ -194,3 +194,13 @@ tbody td{padding:11px 12px;vertical-align:middle;font-variant-numeric:tabular-nu
 .tour-right{display:flex;gap:8px}
 
 @media(max-width:1080px){.prov-grid{grid-template-columns:1fr}.databar{flex-direction:column;align-items:flex-start}}
+
+/* ---------- v3: PDF template picker + language toggle ---------- */
+.letter-controls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+.letter-controls label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.letter-controls select{background:rgba(8,12,24,.7);border:1px solid var(--card-brd);color:var(--ink);
+  border-radius:9px;padding:8px 11px;font-size:12.5px;font-family:inherit;cursor:pointer;min-width:150px}
+.letter-controls select:focus{outline:none;border-color:var(--acc)}
+.letter-controls .btn{margin-left:auto}
+.letter-controls .btn.ghost{margin-left:0}

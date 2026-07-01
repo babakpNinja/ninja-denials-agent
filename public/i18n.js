@@ -1,0 +1,57 @@
+'use strict';
+// Bilingual content for the appeal letter + PDF. Dynamic proper nouns (payer,
+// argument name, DRG, patient, amounts, dates, CARC) stay in English inside the
+// Chinese letter — realistic for bilingual payer appeals; the embedded CJK font
+// still covers Latin + digits so everything renders.
+window.I18N = {
+  en: {
+    langName: 'English',
+    labels: { patient: 'Patient', mrn: 'Medical Record No.', claim: 'Claim ID', dos: 'Date of Service', drg: 'DRG', billed: 'Billed Amount', denial: 'Denial Code', deadline: 'Appeal Deadline', payer: 'Payer' },
+    sections: { summary: 'Claim & Denial Summary', rationale: 'Denial Rationale (as stated by payer)', assessment: 'Agent Assessment', letter: 'Formal Appeal Letter', explanation: 'Plain-Language Explanation' },
+    groups: { 'Medical Necessity': 'medical necessity', 'Bundling': 'bundling', 'Non-Covered': 'non-covered', 'Missing Info': 'missing information', 'Prior Auth': 'prior authorization', 'Timely Filing': 'timely filing' },
+    dept: 'Appeals Department', re: 'Re: Formal Appeal of Claim Denial',
+    greeting: 'To the Appeals Review Committee:',
+    open: 'We formally appeal the above-referenced denial and request full reversal and payment.',
+    reasons: {
+      'Medical Necessity': 'The denial cites CARC {carc} (medical necessity). The clinical record unambiguously supports the medical necessity of the admission and services rendered.',
+      'Bundling': 'The denial cites CARC {carc} (bundling). The services were distinct, separately identifiable, and independently documented.',
+      'Non-Covered': "The denial cites CARC {carc} (non-covered). The service is a covered benefit under the member's plan document for the diagnosis presented.",
+      'Missing Info': 'The denial cites CARC {carc} (missing information). The complete documentation is enclosed herewith, resolving the stated deficiency.',
+      'Prior Auth': 'The denial cites CARC {carc} (no prior authorization). The services met emergency and medical-necessity criteria warranting retrospective authorization.',
+      'Timely Filing': 'The denial cites CARC {carc} (timely filing). Documentation demonstrates the claim was submitted within the contractual filing window.',
+    },
+    argument: 'Our appeal rests on the strongest evidentiary basis for this determination: a {arg}. In our reviewed history, this argument has prevailed against {payer} on {group} denials in {win}% of comparable cases, and the present claim is materially stronger than the median overturned case.',
+    clinicalHdr: 'CLINICAL SUMMARY OF RECORD',
+    clinical: 'Chief complaint: {cc}. Objective findings on presentation included {findings}. The patient required {treatments} over a {los}-day length of stay. These findings meet recognized severity-of-illness and intensity-of-service thresholds.',
+    close: 'Accordingly, the denial is not supported by the clinical facts or the governing plan and medical-policy language. We request that {payer} overturn denial {carc} and remit payment of {amt} within the timeframe required by applicable regulation and the provider agreement. Supporting documentation is enclosed.',
+    signoff: 'Respectfully submitted,\n\nRevenue Integrity Appeals Unit\n{org}\nAutonomous Appeals Agent — reviewed & queued for e-signature',
+    assessment: 'Predicted overturn probability: {p}%. Expected recovery value (billed × overturn probability × deadline urgency): {er}. Recommended argument: {arg} — historically successful against {payer} on {group} denials in {win}% of comparable cases.',
+    explanation: 'This package was assembled by an autonomous appeals agent: it (1) classified the denial by its CARC code, (2) reviewed how similar appeals to this payer have historically resolved, (3) selected the argument with the highest historical overturn rate, (4) cited available clinical evidence, and (5) drafted the payer-addressed letter above. A human reviewer should verify the clinical facts before submission. All figures in this demonstration are based on synthetic data.',
+    demoNote: 'Illustrative demo — synthetic data. Not an official document.',
+  },
+  zh: {
+    langName: '中文',
+    labels: { patient: '患者', mrn: '病案号', claim: '理赔编号', dos: '服务日期', drg: 'DRG 分组', billed: '账单金额', denial: '拒付代码', deadline: '申诉截止日期', payer: '付款方' },
+    sections: { summary: '理赔与拒付摘要', rationale: '拒付理由（付款方陈述）', assessment: '智能体评估', letter: '正式申诉函', explanation: '通俗说明' },
+    groups: { 'Medical Necessity': '医疗必要性', 'Bundling': '打包支付', 'Non-Covered': '不予承保', 'Missing Info': '资料缺失', 'Prior Auth': '事先授权', 'Timely Filing': '及时申报' },
+    dept: '申诉部门', re: '事由：正式申诉理赔拒付',
+    greeting: '致申诉审查委员会：',
+    open: '我方正式申诉上述拒付决定，请求全额撤销并予以支付。',
+    reasons: {
+      'Medical Necessity': '该拒付引用 CARC {carc}（医疗必要性）。临床病历明确支持本次住院及所提供服务的医疗必要性。',
+      'Bundling': '该拒付引用 CARC {carc}（打包支付）。相关服务彼此独立、可单独识别并有独立记录。',
+      'Non-Covered': '该拒付引用 CARC {carc}（不予承保）。就所呈诊断而言，该服务属于会员保险计划文件所承保的福利。',
+      'Missing Info': '该拒付引用 CARC {carc}（资料缺失）。完整文件已随附于此，足以解决所述缺失。',
+      'Prior Auth': '该拒付引用 CARC {carc}（未事先授权）。相关服务符合急诊与医疗必要性标准，应予以追溯授权。',
+      'Timely Filing': '该拒付引用 CARC {carc}（及时申报）。文件证明本理赔已在合同申报期限内提交。',
+    },
+    argument: '我方申诉依据本判定最有力的证据基础：{arg}。根据我方历史记录，该论点在针对 {payer} 的{group}拒付中，于同类案件中有 {win}% 的胜诉率，且本案明显强于已获撤销案件的中位水平。',
+    clinicalHdr: '病历临床摘要',
+    clinical: '主诉：{cc}。就诊时的客观检查发现包括 {findings}。患者在 {los} 天的住院期间需要 {treatments}。上述发现符合公认的病情严重程度与服务强度标准。',
+    close: '因此，该拒付缺乏临床事实及适用保险计划与医疗政策条款的支持。我方请求 {payer} 撤销拒付 {carc}，并在适用法规及医疗服务协议规定的期限内支付 {amt}。相关证明文件已随附。',
+    signoff: '此致\n\n收入完整性申诉小组\n{org}\n自主申诉智能体 — 已审阅并排入电子签名队列',
+    assessment: '预测撤销概率：{p}%。预期回收价值（账单金额 × 撤销概率 × 截止紧迫度）：{er}。建议论点：{arg} — 历史上针对 {payer} 的{group}拒付，于同类案件中胜诉率为 {win}%。',
+    explanation: '本申诉材料由自主申诉智能体生成：其（1）依据 CARC 代码对拒付进行分类，（2）回顾针对该付款方的同类申诉历史结果，（3）选择历史撤销率最高的论点，（4）引用可得的临床证据，（5）起草上述致付款方的申诉函。提交前应由人工审核核实临床事实。本演示中的所有数据均为合成数据。',
+    demoNote: '示例演示 — 合成数据，非正式文件。',
+  },
+};

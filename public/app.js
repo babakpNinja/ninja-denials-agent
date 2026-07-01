@@ -39,6 +39,7 @@ async function boot() {
     fetch('data/evolution.json').then(r => r.json()),
   ]);
   BEST = ledger.best_arguments || {}; NOTES = notes; EVOLUTION = evolution;
+  preloadLogo();
   loadClaims(claims, 'sample');
   initFilters();
   wireModal(); wireChrome();
@@ -224,50 +225,30 @@ function barOpts(gridC, fmt, horizontal) {
 }
 
 /* ---------------------------------------------------------------- letter + reasoning */
-function reasonPara(group, carc) {
-  return {
-    'Medical Necessity': `The denial cites CARC ${carc} (medical necessity). The clinical record unambiguously supports the medical necessity of the admission and services rendered.`,
-    'Bundling': `The denial cites CARC ${carc} (bundling). The services were distinct, separately identifiable, and independently documented.`,
-    'Non-Covered': `The denial cites CARC ${carc} (non-covered). The service is a covered benefit under the member's plan document for the diagnosis presented.`,
-    'Missing Info': `The denial cites CARC ${carc} (missing information). The complete documentation is enclosed herewith, resolving the stated deficiency.`,
-    'Prior Auth': `The denial cites CARC ${carc} (no prior authorization). The services met emergency and medical-necessity criteria warranting retrospective authorization.`,
-    'Timely Filing': `The denial cites CARC ${carc} (timely filing). Documentation demonstrates the claim was submitted within the contractual filing window.`,
-  }[group] || `The denial cites CARC ${carc}. We contest this determination on the clinical and contractual record.`;
-}
-function letterParts(c) {
+function T(s, vars) { return String(s || '').replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null) ? vars[k] : ''); }
+
+// Build the appeal letter in the chosen language (en|zh) for a given org.
+// Dynamic proper nouns (payer, argument, DRG, names, $, dates) stay Latin.
+function buildLetter(c, lang, org) {
+  const t = window.I18N[lang] || window.I18N.en;
   const group = c.carc_group, { argument, win } = bestFor(c.payer, group, c.overturn_prob), note = NOTES[c.claim_id];
   const amt = fmtUSD(c.billed_amount) + '.00';
+  const dateStr = DEMO_TODAY.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const groupName = t.groups[group] || group.toLowerCase();
+  const winPct = Math.round(win * 100);
+  const reason = T(t.reasons[group] || t.reasons['Missing Info'], { carc: c.carc });
+  const argPara = T(t.argument, { arg: argument, payer: c.payer, group: groupName, win: winPct });
   let evidence = '';
-  if (note) evidence = `\n\nCLINICAL SUMMARY OF RECORD\nChief complaint: ${note.chief_complaint}. Objective findings on presentation included ${note.key_findings.join('; ')}. The patient required ${note.treatments.join('; ')} over a ${note.los_days}-day length of stay. These findings meet recognized severity-of-illness and intensity-of-service thresholds.`;
-  const today = DEMO_TODAY.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const text = `${today}
-
-Appeals Department
-${c.payer}
-Re: Formal Appeal of Claim Denial
-
-Patient: ${c.patient_name}
-Medical Record No.: ${c.mrn}
-Claim ID: ${c.claim_id}
-Date of Service: ${c.service_date || '—'}
-DRG ${c.drg_code} — ${c.drg_desc}
-Billed Amount: ${amt}
-Denial Code: ${c.carc}
-
-To the Appeals Review Committee:
-
-We formally appeal the above-referenced denial and request full reversal and payment. ${reasonPara(group, c.carc)}
-
-Our appeal rests on the strongest evidentiary basis for this determination: a ${argument}. In our reviewed history, this argument has prevailed against ${c.payer} on ${group.toLowerCase()} denials in ${Math.round(win * 100)}% of comparable cases, and the present claim is materially stronger than the median overturned case.${evidence}
-
-Accordingly, the denial is not supported by the clinical facts or the governing plan and medical-policy language. We request that ${c.payer} overturn denial ${c.carc} and remit payment of ${amt} within the timeframe required by applicable regulation and the provider agreement. Supporting documentation is enclosed.
-
-Respectfully submitted,
-
-Revenue Integrity Appeals Unit
-Meridian Regional Health System
-Autonomous Appeals Agent — reviewed & queued for e-signature`;
-  return { text, argument, win, note };
+  if (note) evidence = '\n\n' + t.clinicalHdr + '\n' + T(t.clinical, { cc: note.chief_complaint, findings: note.key_findings.join('; '), treatments: note.treatments.join('; '), los: note.los_days });
+  const L = t.labels;
+  const head = `${dateStr}\n\n${t.dept}\n${c.payer}\n${t.re}\n\n` +
+    `${L.patient}: ${c.patient_name}\n${L.mrn}: ${c.mrn}\n${L.claim}: ${c.claim_id}\n` +
+    `${L.dos}: ${c.service_date || '—'}\n${L.drg}: ${c.drg_code} — ${c.drg_desc}\n` +
+    `${L.billed}: ${amt}\n${L.denial}: ${c.carc}`;
+  const body = `${t.greeting}\n\n${t.open} ${reason}\n\n${argPara}${evidence}\n\n` +
+    T(t.close, { payer: c.payer, carc: c.carc, amt });
+  const text = `${head}\n\n${body}\n\n${T(t.signoff, { org: org || 'Meridian Regional Health System' })}`;
+  return { text, argument, win, winPct, note, groupName };
 }
 function genReasoning(c) {
   const group = c.carc_group, { argument, win } = bestFor(c.payer, group, c.overturn_prob), note = NOTES[c.claim_id];
@@ -282,10 +263,12 @@ function genReasoning(c) {
 }
 
 /* ---------------------------------------------------------------- claim modal */
+const TEMPLATES = { standard: 'Meridian Regional System', musc: 'MUSC-branded', concise: 'Concise (single page)' };
+const TEMPLATE_ORG = { standard: 'Meridian Regional Health System', musc: 'Medical University of South Carolina', concise: 'Meridian Regional Health System' };
+
 function openClaim(id) {
   const c = STATE.claims.find(x => String(x.claim_id) === String(id)); if (!c) return;
   const winCls = c.overturn_prob >= 0.6 ? 'hi' : c.overturn_prob >= 0.4 ? 'mid' : 'lo';
-  const { text: letter } = letterParts(c);
   $('#modal-content').innerHTML = `
     <div class="m-head"><div class="m-title">Claim #${esc(c.claim_id)} · ${esc(c.patient_name)}</div>
       <div class="m-tags"><span class="chip carc">${esc(c.carc)} · ${esc(c.carc_group)}</span><span class="st ${esc(c.status)}">${esc(c.status)}</span><span class="chip carc">${esc(c.payer)}</span>${NOTES[c.claim_id] ? '<span class="chip carc">clinical note on file</span>' : ''}</div></div>
@@ -302,52 +285,130 @@ function openClaim(id) {
     <div class="m-sec"><h3>Denial Reason</h3><div class="muted" style="font-size:13px;line-height:1.6;color:#c3cdec">${esc(c.denial_reason)}</div></div>
     <div class="m-sec"><h3>Agent Reasoning Chain</h3><ol class="reason-chain">${genReasoning(c).map(r => `<li>${esc(r)}</li>`).join('')}</ol></div>
     <div class="m-sec"><h3>Generated Appeal Letter</h3>
-      <div style="display:flex;gap:8px;margin-bottom:10px"><button class="btn sm" id="pdf-btn">⬇ Export appeal PDF</button><button class="btn ghost sm" id="copy">Copy letter</button></div>
-      <div class="letter">${esc(letter)}</div></div>`;
-  $('#copy').addEventListener('click', (e) => navigator.clipboard.writeText(letter).then(() => { e.target.textContent = '✓ Copied'; setTimeout(() => e.target.textContent = 'Copy letter', 1600); }));
-  $('#pdf-btn').addEventListener('click', () => exportPDF(c));
+      <div class="letter-controls">
+        <label>Template
+          <select id="pdf-template">${Object.entries(TEMPLATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+        </label>
+        <label>Language
+          <select id="pdf-lang"><option value="en">English</option><option value="zh">中文</option></select>
+        </label>
+        <button class="btn sm" id="pdf-btn">⬇ Export appeal PDF</button>
+        <button class="btn ghost sm" id="copy">Copy letter</button>
+      </div>
+      <div class="letter" id="letter-box"></div></div>`;
+
+  const refreshLetter = () => {
+    const lang = $('#pdf-lang').value, tpl = $('#pdf-template').value;
+    const { text } = buildLetter(c, lang, TEMPLATE_ORG[tpl]);
+    const box = $('#letter-box'); box.textContent = text; box.dataset.text = text;
+  };
+  $('#pdf-lang').addEventListener('change', refreshLetter);
+  $('#pdf-template').addEventListener('change', refreshLetter);
+  refreshLetter();
+  $('#copy').addEventListener('click', (e) => navigator.clipboard.writeText($('#letter-box').dataset.text).then(() => { e.target.textContent = '✓ Copied'; setTimeout(() => e.target.textContent = 'Copy letter', 1600); }));
+  $('#pdf-btn').addEventListener('click', () => exportPDF(c, $('#pdf-template').value, $('#pdf-lang').value));
   $('#modal').hidden = false;
 }
 
 /* ---------------------------------------------------------------- PDF export (hospital-grade) */
-function exportPDF(c) {
+let MUSC_LOGO = null;
+function preloadLogo() { MUSC_LOGO = new Image(); MUSC_LOGO.src = 'assets/musc-logo.png'; }
+
+function exportPDF(c, template, lang) {
+  template = template || 'standard'; lang = lang || 'en';
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  const W = doc.internal.pageSize.getWidth(), M = 54; let y = 0;
-  const { text: letter, argument, win, note } = letterParts(c);
-  // letterhead band
-  doc.setFillColor(11, 16, 32); doc.rect(0, 0, W, 92, 'F');
-  doc.setFillColor(91, 140, 255); doc.rect(0, 92, W, 3, 'F');
-  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text('Meridian Regional Health System', M, 42);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(180, 195, 235);
-  doc.text('Revenue Integrity · Denials & Appeals Unit', M, 60);
-  doc.text('Autonomous Appeals Agent — Appeal Package', M, 75);
-  doc.setFontSize(9); doc.setTextColor(150, 165, 205);
-  doc.text(DEMO_TODAY.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), W - M, 42, { align: 'right' });
-  doc.text('CONFIDENTIAL — for payer appeal use', W - M, 60, { align: 'right' });
-  y = 122;
-  const heading = (t) => { doc.setTextColor(60, 90, 200); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text(t.toUpperCase(), M, y); y += 6; doc.setDrawColor(210, 220, 245); doc.line(M, y, W - M, y); y += 16; doc.setTextColor(30, 35, 55); doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); };
-  const rowPairs = (pairs) => { pairs.forEach(([k, v]) => { doc.setFont('helvetica', 'bold'); doc.text(k, M, y); doc.setFont('helvetica', 'normal'); doc.text(String(v), M + 150, y); y += 16; }); y += 6; };
-  const para = (t, lh = 14) => { const lines = doc.splitTextToSize(t, W - 2 * M); lines.forEach(ln => { if (y > 720) { doc.addPage(); y = 60; } doc.text(ln, M, y); y += lh; }); };
-  // claim header block
-  heading('Claim & Denial Summary');
-  rowPairs([['Patient', c.patient_name], ['Medical Record No.', c.mrn], ['Claim ID', c.claim_id],
-    ['Payer', c.payer], ['DRG', `${c.drg_code} — ${c.drg_desc}`], ['Date of Service', c.service_date || '—'],
-    ['Billed Amount', fmtUSD(c.billed_amount)], ['Denial Code', `${c.carc} — ${c.carc_group}`], ['Appeal Deadline', c.appeal_deadline || '—']]);
-  heading('Denial Rationale (as stated by payer)');
-  para(c.denial_reason); y += 6;
-  heading("Agent Assessment");
-  para(`Predicted overturn probability: ${Math.round(c.overturn_prob * 100)}%. Expected recovery value (billed × overturn probability × deadline urgency): ${fmtUSD(c.priority_score)}. Recommended argument: ${argument} — historically successful against ${c.payer} on ${c.carc_group.toLowerCase()} denials in ${Math.round(win * 100)}% of comparable cases.`);
-  if (note) para(`Clinical basis: chief complaint "${note.chief_complaint}"; findings — ${note.key_findings.join('; ')}; treatment — ${note.treatments.join('; ')} (LOS ${note.los_days}d).`);
-  y += 6;
-  heading('Formal Appeal Letter');
-  para(letter, 13);
-  heading('Plain-Language Explanation');
-  para('This package was assembled by an autonomous appeals agent. It (1) classified the denial by its CARC code, (2) looked up how similar appeals to this payer have historically resolved, (3) selected the argument with the highest historical overturn rate, (4) cited the available clinical evidence, and (5) drafted the payer-addressed letter above. A human reviewer should verify the clinical facts before submission. All figures in this demonstration are based on synthetic data.');
-  // footer page numbers
+  const W = doc.internal.pageSize.getWidth(), M = 54;
+  const t = window.I18N[lang] || window.I18N.en;
+  const zh = lang === 'zh';
+  if (zh && window.ZH_FONT_B64) { doc.addFileToVFS('zh.ttf', window.ZH_FONT_B64); doc.addFont('zh.ttf', 'zh', 'normal'); }
+  const setF = (bold) => { if (zh) doc.setFont('zh', 'normal'); else doc.setFont('helvetica', bold ? 'bold' : 'normal'); };
+
+  const org = TEMPLATE_ORG[template];
+  const { text: letter } = buildLetter(c, lang, org);
+  const winPct = Math.round(bestFor(c.payer, c.carc_group, c.overturn_prob).win * 100);
+  const argument = bestFor(c.payer, c.carc_group, c.overturn_prob).argument;
+  const note = NOTES[c.claim_id];
+  let y = 0;
+
+  // ---- accent color per template
+  const accent = template === 'musc' ? [11, 36, 65] : [40, 60, 130]; // MUSC navy #0B2441
+  const headColor = template === 'musc' ? [11, 36, 65] : [60, 90, 200];
+
+  const heading = (txt) => {
+    if (y > 700) { doc.addPage(); y = 60; }
+    doc.setTextColor(...headColor); setF(true); doc.setFontSize(11);
+    doc.text(zh ? txt : txt.toUpperCase(), M, y); y += 6;
+    doc.setDrawColor(210, 220, 245); doc.line(M, y, W - M, y); y += 16;
+    doc.setTextColor(30, 35, 55); setF(false); doc.setFontSize(10.5);
+  };
+  const rowPairs = (pairs) => { pairs.forEach(([k, v]) => { setF(true); doc.text(k, M, y); setF(false); doc.text(String(v), M + 170, y); y += 16; }); y += 6; };
+  const para = (txt, lh = 14) => { setF(false); doc.setFontSize(10.5); const lines = doc.splitTextToSize(txt, W - 2 * M); lines.forEach(ln => { if (y > 730) { doc.addPage(); y = 60; } doc.text(ln, M, y); y += lh; }); };
+
+  // ---- header band per template
+  const dateStr = DEMO_TODAY.toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  if (template === 'concise') {
+    setF(true); doc.setTextColor(...accent); doc.setFontSize(15);
+    doc.text(org, M, 46);
+    setF(false); doc.setFontSize(9.5); doc.setTextColor(120, 130, 160);
+    doc.text(`${t.sections.letter} · ${t.labels.claim} ${c.claim_id} · ${dateStr}`, M, 62);
+    doc.setDrawColor(...accent); doc.setLineWidth(1.2); doc.line(M, 72, W - M, 72); doc.setLineWidth(1);
+    y = 98;
+  } else if (template === 'musc') {
+    doc.setFillColor(...accent); doc.rect(0, 0, W, 96, 'F');
+    doc.setFillColor(240, 179, 35); doc.rect(0, 96, W, 3, 'F'); // MUSC gold rule
+    if (MUSC_LOGO && MUSC_LOGO.complete && MUSC_LOGO.naturalWidth) {
+      try { doc.addImage(MUSC_LOGO, 'PNG', M, 24, 73, 48); } catch (e) {}
+    } else { doc.setTextColor(255); setF(true); doc.setFontSize(22); doc.text('MUSC', M, 52); }
+    doc.setTextColor(255); setF(false); doc.setFontSize(10.5);
+    doc.text('Revenue Integrity · Denials & Appeals Unit', M + 92, 44);
+    doc.setTextColor(200, 214, 240); doc.setFontSize(9);
+    doc.text('Autonomous Appeals Agent — Appeal Package', M + 92, 60);
+    doc.setFontSize(8.5); doc.setTextColor(190, 205, 235);
+    doc.text(dateStr, W - M, 40, { align: 'right' });
+    doc.text(t.demoNote, W - M, 74, { align: 'right' });
+    y = 122;
+  } else { // standard
+    doc.setFillColor(11, 16, 32); doc.rect(0, 0, W, 92, 'F');
+    doc.setFillColor(91, 140, 255); doc.rect(0, 92, W, 3, 'F');
+    doc.setTextColor(255); setF(true); doc.setFontSize(20); doc.text(org, M, 42);
+    setF(false); doc.setFontSize(10.5); doc.setTextColor(180, 195, 235);
+    doc.text('Revenue Integrity · Denials & Appeals Unit', M, 60);
+    doc.text('Autonomous Appeals Agent — Appeal Package', M, 75);
+    doc.setFontSize(9); doc.setTextColor(150, 165, 205);
+    doc.text(dateStr, W - M, 42, { align: 'right' });
+    doc.text(zh ? '机密 — 仅供付款方申诉使用' : 'CONFIDENTIAL — for payer appeal use', W - M, 60, { align: 'right' });
+    y = 122;
+  }
+
+  if (template === 'concise') {
+    // single-page: just the letter
+    para(letter, 13);
+  } else {
+    heading(t.sections.summary);
+    const L = t.labels;
+    rowPairs([[L.patient, c.patient_name], [L.mrn, c.mrn], [L.claim, c.claim_id],
+      [L.payer, c.payer], [L.drg, `${c.drg_code} — ${c.drg_desc}`], [L.dos, c.service_date || '—'],
+      [L.billed, fmtUSD(c.billed_amount)], [L.denial, `${c.carc} — ${c.carc_group}`], [L.deadline, c.appeal_deadline || '—']]);
+    heading(t.sections.rationale);
+    para(c.denial_reason); y += 6;
+    heading(t.sections.assessment);
+    para(T(t.assessment, { p: Math.round(c.overturn_prob * 100), er: fmtUSD(c.priority_score), arg: argument, payer: c.payer, group: (t.groups[c.carc_group] || c.carc_group), win: winPct }));
+    y += 6;
+    heading(t.sections.letter);
+    para(letter, 13);
+    heading(t.sections.explanation);
+    para(t.explanation);
+  }
+
+  // footer page numbers + demo note
   const pages = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150); doc.text(`Aegis Appeal Package · Claim ${c.claim_id} · Page ${i} of ${pages}`, W / 2, 770, { align: 'center' }); }
-  doc.save(`appeal_claim_${c.claim_id}.pdf`);
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i); setF(false); doc.setFontSize(8); doc.setTextColor(150);
+    const foot = `${zh ? 'Aegis 申诉材料' : 'Aegis Appeal Package'} · ${t.labels.claim} ${c.claim_id} · ${i}/${pages}${template === 'musc' ? ' · ' + t.demoNote : ''}`;
+    doc.text(foot, W / 2, 770, { align: 'center' });
+  }
+  doc.save(`appeal_${c.claim_id}_${template}_${lang}.pdf`);
 }
 
 /* ---------------------------------------------------------------- data bar / sample / upload */
